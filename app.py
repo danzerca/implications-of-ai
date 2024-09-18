@@ -26,18 +26,6 @@ split_documents_NIST = text_splitter.split_texts(documents_NIST)
 split_documents_Blueprint = text_splitter.split_texts(documents_Blueprint)
 
 
-# query = "What is the NIST definition of AI?"
-# response = vector_db.search_by_text(query, k=3)
-# print(response)
-
-# user_prompt_template = "{content}"
-# user_role_prompt = UserRolePrompt(user_prompt_template)
-# system_prompt_template = (
-#     "You are an expert in {expertise}, you always answer in a kind way."
-# )
-# system_role_prompt = SystemRolePrompt(system_prompt_template)
-
-
 RAG_PROMPT_TEMPLATE = """ \
 Use the provided context to answer the user's query.
 
