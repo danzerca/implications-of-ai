@@ -51,7 +51,7 @@ class RetrievalAugmentedQAPipeline:
         self.llm = llm
         self.vector_db_retriever = vector_db_retriever
 
-    def run_pipeline(self, user_query: str) -> str:
+    async def arun_pipeline(self, user_query: str):
         context_list = self.vector_db_retriever.search_by_text(user_query, k=4)
 
         context_prompt = ""
@@ -62,8 +62,11 @@ class RetrievalAugmentedQAPipeline:
 
         formatted_user_prompt = user_prompt.create_message(user_query=user_query, context=context_prompt)
 
-        return {"response" : self.llm.run([formatted_system_prompt, formatted_user_prompt]), "context" : context_list}
+        async def generate_response():
+            async for chunk in self.llm.astream([formatted_system_prompt, formatted_user_prompt]):
+                yield chunk
 
+        return {"response": generate_response(), "context": context_list}
 
 
 # ------------------------------------------------------------
