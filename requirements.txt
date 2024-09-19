@@ -3,3 +3,4 @@ chainlit==0.7.700
 openai
 PyPDF2
 langchain_community
+langchain
