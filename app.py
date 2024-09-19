@@ -1,17 +1,13 @@
-import os
 from typing import List
-from chainlit.types import AskFileResponse
 from aimakerspace.text_utils import CharacterTextSplitter, PDFFileLoader
 from aimakerspace.openai_utils.prompts import (
     UserRolePrompt,
     SystemRolePrompt,
-    AssistantRolePrompt,
 )
 from aimakerspace.openai_utils.embedding import EmbeddingModel
 from aimakerspace.vectordatabase import VectorDatabase
 from aimakerspace.openai_utils.chatmodel import ChatOpenAI
 import chainlit as cl
-import asyncio
 import nest_asyncio
 nest_asyncio.apply()
 
@@ -74,14 +70,16 @@ class RetrievalAugmentedQAPipeline:
 
 @cl.on_chat_start  # marks a function that will be executed at the start of a user session
 async def start_chat():
-    # settings = {
-    #     "model": "gpt-3.5-turbo",
-    #     "temperature": 0,
-    #     "max_tokens": 500,
-    #     "top_p": 1,
-    #     "frequency_penalty": 0,
-    #     "presence_penalty": 0,
-    # }
+    settings = {
+        "model": "gpt-4o-mini",
+        "temperature": 0,
+        "max_tokens": 500,
+        "top_p": 1,
+        "frequency_penalty": 0,
+        "presence_penalty": 0,
+    }
+
+    cl.user_session.set("settings", settings)
 
     # Create a dict vector store
     vector_db = VectorDatabase()
