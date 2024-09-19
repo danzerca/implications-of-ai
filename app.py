@@ -15,26 +15,21 @@ import nest_asyncio
 nest_asyncio.apply()
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-# from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-# from langchain_community.vectorstores import Qdrant
-# from langchain.prompts import ChatPromptTemplate
-# from langchain_core.runnables import RunnablePassthrough
 
 
 filepath_NIST = "data/NIST.AI.600-1.pdf"
 filepath_Blueprint = "data/Blueprint-for-an-AI-Bill-of-Rights.pdf"
-
-documents_NIST = PyMuPDFLoader(filepath_NIST).load()
-documents_Blueprint = PyMuPDFLoader(filepath_Blueprint).load()
-documents = documents_NIST + documents_Blueprint
-
 
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size = 500,
     chunk_overlap = 50
 )
 
-rag_documents = text_splitter.split_documents(documents)
+documents_NIST = PyMuPDFLoader(filepath_NIST).load()
+documents_Blueprint = PyMuPDFLoader(filepath_Blueprint).load()
+
+split_NIST = text_splitter.split_documents(documents_NIST)
+split_Blueprint = text_splitter.split_documents(documents_Blueprint)
 
 # embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 
@@ -113,9 +108,9 @@ async def start_chat():
 
     # # Create a dict vector store
     vector_db = VectorDatabase()
-    vector_db = await vector_db.abuild_from_list(rag_documents)
-    # vector_db = await vector_db.abuild_from_list(split_documents_NIST)
-    # vector_db = await vector_db.abuild_from_list(split_documents_Blueprint)
+    # vector_db = await vector_db.abuild_from_list(rag_documents)
+    vector_db = await vector_db.abuild_from_list(split_NIST)
+    vector_db = await vector_db.abuild_from_list(split_Blueprint)
     
     # # chat_openai = ChatOpenAI()
     llm = ChatOpenAI(model="gpt-4o-mini", tags=["base_llm"]) 
