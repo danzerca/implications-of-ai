@@ -1,6 +1,6 @@
 numpy
 chainlit==0.7.700
-openai
+# openai
 PyPDF2
 pymupdf
 langchain
