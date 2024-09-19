@@ -14,51 +14,29 @@ import chainlit as cl
 import asyncio
 import nest_asyncio
 nest_asyncio.apply()
-import langchain_community
-from langchain_community.document_loaders import PyMuPDFLoader
-import langchain
-from langchain.prompts import ChatPromptTemplate
 
-filepath_NIST = "data/NIST.AI.600-1.pdf"
-filepath_Blueprint = "data/Blueprint-for-an-AI-Bill-of-Rights.pdf"
 
-documents_NIST = PyMuPDFLoader(filepath_NIST).load()
-documents_Blueprint = PyMuPDFLoader(filepath_Blueprint).load()
-documents = documents_NIST + documents_Blueprint
+pdf_loader_NIST = PDFFileLoader("data/NIST.AI.600-1.pdf")
+pdf_loader_Blueprint = PDFFileLoader("data/Blueprint-for-an-AI-Bill-of-Rights.pdf")
+documents_NIST = pdf_loader_NIST.load_documents()
+documents_Blueprint = pdf_loader_Blueprint.load_documents()
 
-# pdf_loader_NIST = PDFFileLoader("data/NIST.AI.600-1.pdf")
-# pdf_loader_Blueprint = PDFFileLoader("data/Blueprint-for-an-AI-Bill-of-Rights.pdf")
-# documents_NIST = pdf_loader_NIST.load_documents()
-# documents_Blueprint = pdf_loader_Blueprint.load_documents()
+text_splitter = CharacterTextSplitter()
+split_documents_NIST = text_splitter.split_texts(documents_NIST)
+split_documents_Blueprint = text_splitter.split_texts(documents_Blueprint)
 
-# text_splitter = CharacterTextSplitter()
-# split_documents_NIST = text_splitter.split_texts(documents_NIST)
-# split_documents_Blueprint = text_splitter.split_texts(documents_Blueprint)
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size = 500,
-    chunk_overlap = 50
-)
-
-rag_documents = text_splitter.split_documents(documents)
-
-RAG_PROMPT = """\
-Given a provided context and question, you must answer the question based only on context.
-
-If you cannot answer the question based on the context - you must say "I don't know".
-
-Context: {context}
-Question: {question}
+RAG_PROMPT_TEMPLATE = """ \
+Use the provided context to answer the user's query.
+You may not answer the user's query unless there is specific context in the following text.
+If you do not know the answer, or cannot answer, please respond with "I don't know".
 """
 
-rag_prompt = ChatPromptTemplate.from_template(RAG_PROMPT)
+rag_prompt = SystemRolePrompt(RAG_PROMPT_TEMPLATE)
 
 USER_PROMPT_TEMPLATE = """ \
 Context:
 {context}
-
 User Query:
 {user_query}
 """
