@@ -64,8 +64,8 @@ documents_Blueprint = pdf_loader_Blueprint.load_documents()
 
 
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-split_documents_NIST = text_splitter.split_texts(documents_NIST)
-split_documents_Blueprint = text_splitter.split_texts(documents_Blueprint)
+split_documents_NIST = text_splitter.split_text(documents_NIST)
+split_documents_Blueprint = text_splitter.split_text(documents_Blueprint)
 documents = split_documents_NIST + split_documents_Blueprint
 
 embeddings = OpenAIEmbeddings()
