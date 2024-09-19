@@ -1,60 +1,14 @@
-import os
 from typing import List
-from PyPDF2 import PdfReader
-
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma
-from langchain.chat_models import ChatOpenAI
-from langchain.prompts import SystemMessagePromptTemplate, HumanMessagePromptTemplate, ChatPromptTemplate
-from langchain.docstore.document import Document
-from langchain.schema import StrOutputParser
-from langchain.chains import (
-    ConversationalRetrievalChain,
-    LLMChain
+from aimakerspace.text_utils import CharacterTextSplitter, PDFFileLoader
+from aimakerspace.openai_utils.prompts import (
+    UserRolePrompt,
+    SystemRolePrompt
 )
-
+from aimakerspace.vectordatabase import VectorDatabase
+from aimakerspace.openai_utils.chatmodel import ChatOpenAI
 import chainlit as cl
-
-
-class PDFFileLoader:
-    def __init__(self, path: str):
-        self.documents = []
-        self.path = path
-
-    def load(self):
-        if os.path.isdir(self.path):
-            self.load_directory()
-        elif os.path.isfile(self.path) and self.path.endswith(".pdf"):
-            self.load_file()
-        else:
-            raise ValueError(
-                "Provided path is neither a valid directory nor a .pdf file."
-            )
-
-    def load_file(self):
-        with open(self.path, "rb") as file:
-            pdf_reader = PdfReader(file)
-            text = ""
-            for page in pdf_reader.pages:
-                text += page.extract_text()
-            self.documents.append(text)
-
-    def load_directory(self):
-        for root, _, files in os.walk(self.path):
-            for file in files:
-                if file.endswith(".pdf"):
-                    file_path = os.path.join(root, file)
-                    with open(file_path, "rb") as f:
-                        pdf_reader = PdfReader(f)
-                        text = ""
-                        for page in pdf_reader.pages:
-                            text += page.extract_text()
-                        self.documents.append(text)
-
-    def load_documents(self):
-        self.load()
-        return self.documents
+import nest_asyncio
+nest_asyncio.apply()
 
 
 pdf_loader_NIST = PDFFileLoader("data/NIST.AI.600-1.pdf")
@@ -62,24 +16,18 @@ pdf_loader_Blueprint = PDFFileLoader("data/Blueprint-for-an-AI-Bill-of-Rights.pd
 documents_NIST = pdf_loader_NIST.load_documents()
 documents_Blueprint = pdf_loader_Blueprint.load_documents()
 
+text_splitter = CharacterTextSplitter()
+split_documents_NIST = text_splitter.split_texts(documents_NIST)
+split_documents_Blueprint = text_splitter.split_texts(documents_Blueprint)
 
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-split_documents_NIST = text_splitter.split_text(documents_NIST)
-split_documents_Blueprint = text_splitter.split_text(documents_Blueprint)
-documents = split_documents_NIST + split_documents_Blueprint
 
-embeddings = OpenAIEmbeddings()
-# Create a metadata for each chunk
-metadatas = [{"source": f"{i}-pl"} for i in range(len(documents))]
-
-# Set up prompts
 RAG_PROMPT_TEMPLATE = """ \
 Use the provided context to answer the user's query.
-
 You may not answer the user's query unless there is specific context in the following text.
-
 If you do not know the answer, or cannot answer, please respond with "I don't know".
 """
+
+rag_prompt = SystemRolePrompt(RAG_PROMPT_TEMPLATE)
 
 USER_PROMPT_TEMPLATE = """ \
 Context:
@@ -88,42 +36,58 @@ User Query:
 {user_query}
 """
 
-rag_prompt = SystemMessagePromptTemplate.from_template(RAG_PROMPT_TEMPLATE)
-user_prompt = HumanMessagePromptTemplate.from_template(USER_PROMPT_TEMPLATE)
-chat_prompt = ChatPromptTemplate.from_messages([rag_prompt, user_prompt])
+user_prompt = UserRolePrompt(USER_PROMPT_TEMPLATE)
+
+class RetrievalAugmentedQAPipeline:
+    def __init__(self, llm: ChatOpenAI(), vector_db_retriever: VectorDatabase) -> None:
+        self.llm = llm
+        self.vector_db_retriever = vector_db_retriever
+
+    async def arun_pipeline(self, user_query: str):
+        context_list = self.vector_db_retriever.search_by_text(user_query, k=4)
+
+        context_prompt = ""
+        for context in context_list:
+            context_prompt += context[0] + "\n"
+
+        formatted_system_prompt = rag_prompt.create_message()
+
+        formatted_user_prompt = user_prompt.create_message(user_query=user_query, context=context_prompt)
+
+        async def generate_response():
+            async for chunk in self.llm.astream([formatted_system_prompt, formatted_user_prompt]):
+                yield chunk
+
+        return {"response": generate_response(), "context": context_list}
+
+
+# ------------------------------------------------------------
+
 
 @cl.on_chat_start
 async def start_chat():
-    # settings = {
-    #     "model": "gpt-4o-mini",
-    #     "temperature": 0,
-    #     "max_tokens": 500,
-    #     "top_p": 1,
-    #     "frequency_penalty": 0,
-    #     "presence_penalty": 0,
-    # }
+    settings = {
+        "model": "gpt-4o-mini"
+    }
+    cl.user_session.set("settings", settings)
 
-    # cl.user_session.set("settings", settings)
+    # Create a vector store
+    vector_db = VectorDatabase()
+    vector_db = await vector_db.abuild_from_list(split_documents_NIST)
+    vector_db = await vector_db.abuild_from_list(split_documents_Blueprint)
+    
+    chat_openai = ChatOpenAI()
 
-
-    # Vector Database
-    docsearch = await cl.make_async(Chroma.from_texts)(
-        documents, embeddings, metadatas=metadatas
+    # Create a chain
+    retrieval_augmented_qa_pipeline = RetrievalAugmentedQAPipeline(
+        vector_db_retriever=vector_db,
+        llm=chat_openai
     )
 
-    # Create a chain that uses the Chroma vector store
-    chain = ConversationalRetrievalChain.from_llm(
-        ChatOpenAI(model_name="gpt-4o-mini", streaming=True),
-        prompt=chat_prompt, 
-        output_parser=StrOutputParser(),
-        retriever=docsearch.as_retriever()
-    )
+    cl.user_session.set("chain", retrieval_augmented_qa_pipeline)
 
-    # chain = LLMChain(llm= ChatOpenAI(model_name="gpt-4o-mini", streaming=True), prompt=chat_prompt, output_parser=StrOutputParser())
 
-    cl.user_session.set("chain", chain)
-
-@cl.on_message  # marks a function that should be run each time the chatbot receives a message from a user
+@cl.on_message
 async def main(message):
     chain = cl.user_session.get("chain")
 
