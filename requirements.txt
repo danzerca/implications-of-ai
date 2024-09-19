@@ -2,3 +2,6 @@ numpy
 chainlit==0.7.700
 openai
 PyPDF2
+langchain
+langchain-community
+langchain-text-splitters

@@ -1,30 +1,45 @@
-import os
-from typing import List
-from chainlit.types import AskFileResponse
+# from typing import List
+# from chainlit.types import AskFileResponse
 from aimakerspace.text_utils import CharacterTextSplitter, PDFFileLoader
 from aimakerspace.openai_utils.prompts import (
     UserRolePrompt,
     SystemRolePrompt,
-    AssistantRolePrompt,
 )
-from aimakerspace.openai_utils.embedding import EmbeddingModel
+# from aimakerspace.openai_utils.embedding import EmbeddingModel
 from aimakerspace.vectordatabase import VectorDatabase
 from aimakerspace.openai_utils.chatmodel import ChatOpenAI
 import chainlit as cl
-import asyncio
+# import asyncio
 import nest_asyncio
 nest_asyncio.apply()
+from langchain_community.document_loaders import PyMuPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.embeddings import OpenAIEmbeddings
 
 
-pdf_loader_NIST = PDFFileLoader("data/NIST.AI.600-1.pdf")
-pdf_loader_Blueprint = PDFFileLoader("data/Blueprint-for-an-AI-Bill-of-Rights.pdf")
-documents_NIST = pdf_loader_NIST.load_documents()
-documents_Blueprint = pdf_loader_Blueprint.load_documents()
+# pdf_loader_NIST = PDFFileLoader("data/NIST.AI.600-1.pdf")
+# pdf_loader_Blueprint = PDFFileLoader("data/Blueprint-for-an-AI-Bill-of-Rights.pdf")
+# documents_NIST = pdf_loader_NIST.load_documents()
+# documents_Blueprint = pdf_loader_Blueprint.load_documents()
 
-text_splitter = CharacterTextSplitter()
-split_documents_NIST = text_splitter.split_texts(documents_NIST)
-split_documents_Blueprint = text_splitter.split_texts(documents_Blueprint)
+filepath_NIST = "data/NIST.AI.600-1.pdf"
+filepath_Blueprint = "data/Blueprint-for-an-AI-Bill-of-Rights.pdf"
 
+documents_NIST = PyMuPDFLoader(filepath_NIST).load()
+documents_Blueprint = PyMuPDFLoader(filepath_Blueprint).load()
+documents = documents_NIST + documents_Blueprint
+
+
+# text_splitter = CharacterTextSplitter()
+# split_documents_NIST = text_splitter.split_texts(documents_NIST)
+# split_documents_Blueprint = text_splitter.split_texts(documents_Blueprint)
+
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size = 500,
+    chunk_overlap = 50
+)
+
+rag_documents = text_splitter.split_documents(documents)
 
 RAG_PROMPT_TEMPLATE = """ \
 Use the provided context to answer the user's query.
@@ -82,8 +97,9 @@ async def start_chat():
 
     # Create a dict vector store
     vector_db = VectorDatabase()
-    vector_db = await vector_db.abuild_from_list(split_documents_NIST)
-    vector_db = await vector_db.abuild_from_list(split_documents_Blueprint)
+    vector_db = await vector_db.abuild_from_list(rag_documents)
+    # vector_db = await vector_db.abuild_from_list(split_documents_NIST)
+    # vector_db = await vector_db.abuild_from_list(split_documents_Blueprint)
     
     chat_openai = ChatOpenAI()
 
