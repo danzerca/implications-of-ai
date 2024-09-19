@@ -6,8 +6,8 @@ langchain
 langchain-core
 langchain-community
 langchain-qdrant
-RecursiveCharacterTextSplitter
-ChatPromptTemplate
+# RecursiveCharacterTextSplitter
+# ChatPromptTemplate
 # StrOutputParser
 # qdrant-client
 # QdrantClient
