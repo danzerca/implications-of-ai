@@ -7,20 +7,15 @@ from aimakerspace.openai_utils.prompts import (
 )
 # from aimakerspace.openai_utils.embedding import EmbeddingModel
 from aimakerspace.vectordatabase import VectorDatabase
-from aimakerspace.openai_utils.chatmodel import ChatOpenAI
+# from aimakerspace.openai_utils.chatmodel import ChatOpenAI
 import chainlit as cl
 # import asyncio
 import nest_asyncio
 nest_asyncio.apply()
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
-
-# pdf_loader_NIST = PDFFileLoader("data/NIST.AI.600-1.pdf")
-# pdf_loader_Blueprint = PDFFileLoader("data/Blueprint-for-an-AI-Bill-of-Rights.pdf")
-# documents_NIST = pdf_loader_NIST.load_documents()
-# documents_Blueprint = pdf_loader_Blueprint.load_documents()
 
 filepath_NIST = "data/NIST.AI.600-1.pdf"
 filepath_Blueprint = "data/Blueprint-for-an-AI-Bill-of-Rights.pdf"
@@ -29,10 +24,6 @@ documents_NIST = PyMuPDFLoader(filepath_NIST).load()
 documents_Blueprint = PyMuPDFLoader(filepath_Blueprint).load()
 documents = documents_NIST + documents_Blueprint
 
-
-# text_splitter = CharacterTextSplitter()
-# split_documents_NIST = text_splitter.split_texts(documents_NIST)
-# split_documents_Blueprint = text_splitter.split_texts(documents_Blueprint)
 
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size = 500,
@@ -101,12 +92,14 @@ async def start_chat():
     # vector_db = await vector_db.abuild_from_list(split_documents_NIST)
     # vector_db = await vector_db.abuild_from_list(split_documents_Blueprint)
     
-    chat_openai = ChatOpenAI()
+    # chat_openai = ChatOpenAI()
+    llm = ChatOpenAI(model="gpt-4o-mini", tags=["base_llm"]) 
+
 
     # Create a chain
     retrieval_augmented_qa_pipeline = RetrievalAugmentedQAPipeline(
         vector_db_retriever=vector_db,
-        llm=chat_openai
+        llm=llm
     )
 
     # cl.user_session.set("settings", settings)
