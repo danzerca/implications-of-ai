@@ -10,3 +10,6 @@ langchain-text-splitters
 # langchain-openai
 # qdrant-client
 # langchain-qdrant
+langchain
+chromadb
+tiktoken
