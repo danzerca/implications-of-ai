@@ -1,4 +1,11 @@
-numpy
 chainlit==0.7.700
-openai
-PyPDF2
+langchain
+langchain_community
+langchain_openai
+langchain_core==0.2.40
+langchain_qdrant
+python-dotenv
+tiktoken
+pymupdf
+qdrant-client
+sentence-transformers

@@ -1,100 +1,110 @@
-from typing import List
-from aimakerspace.text_utils import CharacterTextSplitter, PDFFileLoader
-from aimakerspace.openai_utils.prompts import (
-    UserRolePrompt,
-    SystemRolePrompt
-)
-from aimakerspace.vectordatabase import VectorDatabase
-from aimakerspace.openai_utils.chatmodel import ChatOpenAI
+import os
+from langchain_community.document_loaders import PyMuPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
+from langchain_qdrant import QdrantVectorStore
+from langchain_community.vectorstores import Qdrant
+from langchain.prompts import ChatPromptTemplate
+from langchain_openai.chat_models import ChatOpenAI
+from langchain_openai.embeddings import OpenAIEmbeddings
+from langchain.embeddings.base import Embeddings
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import Distance, VectorParams
+from operator import itemgetter
 import chainlit as cl
-import nest_asyncio
-nest_asyncio.apply()
+from sentence_transformers import SentenceTransformer
 
 
-pdf_loader_NIST = PDFFileLoader("data/NIST.AI.600-1.pdf")
-pdf_loader_Blueprint = PDFFileLoader("data/Blueprint-for-an-AI-Bill-of-Rights.pdf")
-documents_NIST = pdf_loader_NIST.load_documents()
-documents_Blueprint = pdf_loader_Blueprint.load_documents()
-
-text_splitter = CharacterTextSplitter()
-split_documents_NIST = text_splitter.split_texts(documents_NIST)
-split_documents_Blueprint = text_splitter.split_texts(documents_Blueprint)
 
 
-RAG_PROMPT_TEMPLATE = """ \
-Use the provided context to answer the user's query.
-You may not answer the user's query unless there is specific context in the following text.
-If you do not know the answer, or cannot answer, please respond with "I don't know".
-"""
+# Load all the documents in the directory
+documents = []
+directory = "data/"
 
-rag_prompt = SystemRolePrompt(RAG_PROMPT_TEMPLATE)
+for filename in os.listdir(directory):
+    if filename.endswith(".pdf"):  # Check if the file is a PDF
+        file_path = os.path.join(directory, filename)
+        loader = PyMuPDFLoader(file_path)
+        docs = loader.load()
+        documents.extend(docs)
 
-USER_PROMPT_TEMPLATE = """ \
-Context:
-{context}
-User Query:
-{user_query}
-"""
+# Split the documents by character
+character_text_splitter = CharacterTextSplitter(
+    separator="\n\n",
+    chunk_size=500,
+    chunk_overlap=40,
+    length_function=len,
+    is_separator_regex=False,
+)
+rag_documents = character_text_splitter.split_documents(documents)
 
-user_prompt = UserRolePrompt(USER_PROMPT_TEMPLATE)
-
-class RetrievalAugmentedQAPipeline:
-    def __init__(self, llm: ChatOpenAI(), vector_db_retriever: VectorDatabase) -> None:
-        self.llm = llm
-        self.vector_db_retriever = vector_db_retriever
-
-    async def arun_pipeline(self, user_query: str):
-        context_list = self.vector_db_retriever.search_by_text(user_query, k=4)
-
-        context_prompt = ""
-        for context in context_list:
-            context_prompt += context[0] + "\n"
-
-        formatted_system_prompt = rag_prompt.create_message()
-
-        formatted_user_prompt = user_prompt.create_message(user_query=user_query, context=context_prompt)
-
-        async def generate_response():
-            async for chunk in self.llm.astream([formatted_system_prompt, formatted_user_prompt]):
-                yield chunk
-
-        return {"response": generate_response(), "context": context_list}
+# Split the documents recursively
+recursive_text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=500,
+    chunk_overlap=40,
+    length_function=len,
+    is_separator_regex=False
+)
+# rag_documents = recursive_text_splitter.split_documents(documents)
 
 
-# ------------------------------------------------------------
+class SentenceTransformerEmbeddings(Embeddings):
+    def __init__(self, model):
+        self.model = model
+
+    def embed_documents(self, texts):
+        return self.model.encode(texts)
+
+    def embed_query(self, text):
+        return self.model.encode(text)
+
+# Use the wrapper class
+model = SentenceTransformer("danicafisher/dfisher-sentence-transformer-fine-tuned2")
+embedding = SentenceTransformerEmbeddings(model)
+# embedding = OpenAIEmbeddings(model="text-embedding-3-small")
+
+# Create the vector store
+vectorstore = Qdrant.from_documents(
+    rag_documents,
+    embedding,
+    location=":memory:",
+    collection_name="Implications of AI",
+)
+
+retriever = vectorstore.as_retriever()
+llm = ChatOpenAI(model="gpt-4")
 
 
+# @cl.cache_resource
 @cl.on_chat_start
 async def start_chat():
-    settings = {
-        "model": "gpt-4o-mini"
-    }
-    cl.user_session.set("settings", settings)
 
-    # Create a vector store
-    vector_db = VectorDatabase()
-    vector_db = await vector_db.abuild_from_list(split_documents_NIST)
-    vector_db = await vector_db.abuild_from_list(split_documents_Blueprint)
-    
-    chat_openai = ChatOpenAI()
+    template = """
+        Use the provided context to answer the user's query.
+        You may not answer the user's query unless there is specific context in the following text.
+        If you do not know the answer, or cannot answer, please respond with "I don't know".
+        Question:
+        {question}
+        Context:
+        {context}
+        Answer:
+    """
 
-    # Create a chain
-    retrieval_augmented_qa_pipeline = RetrievalAugmentedQAPipeline(
-        vector_db_retriever=vector_db,
-        llm=chat_openai
+    prompt = ChatPromptTemplate.from_template(template)
+
+    base_chain = (
+        {"context": itemgetter("question") | retriever, "question": itemgetter("question")}
+        | prompt | llm | StrOutputParser()
     )
 
-    cl.user_session.set("chain", retrieval_augmented_qa_pipeline)
+    cl.user_session.set("chain", base_chain)
 
 
 @cl.on_message
 async def main(message):
     chain = cl.user_session.get("chain")
-
-    msg = cl.Message(content="")
-    result = await chain.arun_pipeline(message.content)
-
-    async for stream_resp in result["response"]:
-        await msg.stream_token(stream_resp)
+    result = chain.invoke({"question":message.content})
+    msg = cl.Message(content=result)
 
     await msg.send()
