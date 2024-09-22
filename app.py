@@ -1,22 +1,16 @@
 import os
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
-from langchain_qdrant import QdrantVectorStore
 from langchain_community.vectorstores import Qdrant
 from langchain.prompts import ChatPromptTemplate
 from langchain_openai.chat_models import ChatOpenAI
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain.embeddings.base import Embeddings
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
-from qdrant_client import QdrantClient
-from qdrant_client.http.models import Distance, VectorParams
+
 from operator import itemgetter
 import chainlit as cl
 from sentence_transformers import SentenceTransformer
-
-
-
 
 # Load all the documents in the directory
 documents = []
@@ -46,7 +40,7 @@ recursive_text_splitter = RecursiveCharacterTextSplitter(
     length_function=len,
     is_separator_regex=False
 )
-# rag_documents = recursive_text_splitter.split_documents(documents)
+#rag_documents = recursive_text_splitter.split_documents(documents)
 
 
 class SentenceTransformerEmbeddings(Embeddings):
@@ -59,9 +53,11 @@ class SentenceTransformerEmbeddings(Embeddings):
     def embed_query(self, text):
         return self.model.encode(text)
 
-# Use the wrapper class
+# Use the wrapper class for the fine-tuned model
 model = SentenceTransformer("danicafisher/dfisher-sentence-transformer-fine-tuned2")
 embedding = SentenceTransformerEmbeddings(model)
+
+# Non-fine-tuned model
 # embedding = OpenAIEmbeddings(model="text-embedding-3-small")
 
 # Create the vector store
@@ -76,10 +72,8 @@ retriever = vectorstore.as_retriever()
 llm = ChatOpenAI(model="gpt-4")
 
 
-# @cl.cache_resource
 @cl.on_chat_start
 async def start_chat():
-
     template = """
         Use the provided context to answer the user's query.
         You may not answer the user's query unless there is specific context in the following text.
