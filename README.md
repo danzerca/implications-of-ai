@@ -18,10 +18,30 @@ Your boss, the SVP of Technology, green-lighted this project to drive the adopti
 >
 > *Hint: Create a list of potential questions that people are likely to ask!*
 
+Potential questions:
+1. How should automated systems be designed to ensure fairness and equity?
+2. What are the primary information security risks associated with AI?
+3. What is the role of the National Institute of Standards and Technology (NIST) in AI?
+4. How can structured feedback about content provenance be used to improve AI systems?
+5. How are feedback mechanisms utilized to verify AI system performance?
+6. How can evaluations involving human subjects in AI applications be conducted?
+7. How can national security risks be addressed in AI systems?
+8. How can organizations manage national security risks in AI systems?
+
 ✅ Deliverables:
 1. Describe the default chunking strategy that you will use.
+
+In order to answer the variety of questions expected from people, I will use a character text splitter, splitting on new lines with a chunk size of 500 and a chunk overlap of 40. Character text splitters are useful for text that contains line breaks, like the PDFs provided.
+
 2. Articulate a chunking strategy that you would also like to test out.
+
+I would also like to test out a recursive text splitter, splitting on new lines with a chunk size of 500 and a chunk overlap of 40. A recursive text splitter is ideal for maintaining context and readability. It produces more coherent chunks by respecting natural language structures.
+
 3. Describe how and why you made these decisions
+
+I chose the character text splitter because it is a simple and effective way to split the documents. I am choosing to also test the recursive text splitter because it is a more complex way to split the documents that has the potential to improve the performance of the RAG system. Character text splitters focus on strict size limits, while recursive text splitters prioritize preserving logical context and structure within those size constraints.
+
+
 
 ## Task 2: Building a Quick End-to-End Prototype
 **You are an AI Systems Engineer.**  The SVP of Technology has tasked you with spinning up a quick RAG prototype for answering questions that internal stakeholders have about AI, using the data provided in Task 1.
@@ -30,7 +50,30 @@ Your boss, the SVP of Technology, green-lighted this project to drive the adopti
 
 ✅ Deliverables:
 1. Build a prototype and deploy to a Hugging Face Space, and create a short (< 2 min) loom video demonstrating some initial testing inputs and outputs.
+
+[Loom Video](https://www.loom.com/share/a0af8682e5544c80a4e4865fb410a4e2?sid=f1392a0a-09fe-4669-a1d3-2d4925ffa16d)
+
 2. How did you choose your stack, and why did you select each tool the way you did?
+
+I chose the following stack:
+- Chainlit for the UI
+- LangChain for the RAG framework
+- Qdrant for the vector database
+- OpenAI for the embedding model
+- ChatGPT for the LLM
+
+I chose these tools because they are industry-standard tools for building RAG systems.
+
+- Chainlit for the UI:
+Enables rapid prototyping and customization of interactive user interfaces for AI applications, with seamless integration and real-time data visualization.
+- LangChain for the RAG Framework:
+Provides a modular architecture to efficiently connect language models with various data sources, optimizing retrieval and generation workflows in RAG systems.
+- Qdrant for the Vector Database:
+Offers high-performance and scalable vector search capabilities, ideal for managing and querying large-scale embedding data with precision and speed.
+- OpenAI for the Embedding Model:
+Delivers state-of-the-art text embeddings that capture semantic relationships, enhancing the accuracy and relevance of information retrieval.
+- ChatGPT for the LLM:
+Generates coherent and context-aware responses, making it an excellent choice for dynamic, conversational AI applications in RAG systems.
 
 ## Task 3: Creating a Golden Test Data Set
 **You are an AI Evaluation & Performance Engineer.**  The AI Systems Engineer who built the initial RAG system has asked for your help and expertise in creating a "Golden Data Set."
@@ -39,6 +82,8 @@ Your boss, the SVP of Technology, green-lighted this project to drive the adopti
 
 ✅ Deliverables:
 1. Assess your pipeline using the RAGAS framework including key metrics faithfulness, answer relevancy, context precision, and context recall.  Provide a table of your output results.
+
+The overall result of the RAGAS framework is: {'faithfulness': 0.9513, 'answer_relevancy': 0.9568, 'context_recall': 0.8947, 'context_precision': 0.9342, 'answer_correctness': 0.5721}. Below is the table of the initial evaluation of the RAGAS framework using the synthetic data set.
 
 <div>
 <style scoped>
@@ -304,6 +349,8 @@ Your boss, the SVP of Technology, green-lighted this project to drive the adopti
 
 2. What conclusions can you draw about performance and effectiveness of your pipeline with this information?
 
+Based on the RAGAS framework, the performance of the pipeline is not great. The faithfulness metric is 0.95, the answer relevancy metric is 0.95, the context recall metric is 0.89, the context precision metric is 0.93, and the answer correctness metric is 0.57. The model is consistent in its performance, but does not always provide the correct answer.
+
 ## Task 4: Fine-Tuning Open-Source Embeddings
 **You are an Machine Learning Engineer.**  The AI Evaluation and Performance Engineer has asked for your help in fine-tuning the embedding model used in their recent RAG application build.
 
@@ -311,12 +358,12 @@ Your boss, the SVP of Technology, green-lighted this project to drive the adopti
 
 ✅ Deliverables:
 1. Swap out your existing embedding model for the new fine-tuned version.  Provide a link to your fine-tuned embedding model on the Hugging Face Hub.
+
+The fine-tuned embedding model is available at https://huggingface.co/danicafisher/dfisher-sentence-transformer-fine-tuned2
+
 2. How did you choose the embedding model for this application?
 
-{'faithfulness': 0.9513, 'answer_relevancy': 0.9568, 'context_recall': 0.8947, 'context_precision': 0.9342, 'answer_correctness': 0.5721}
-
-{'faithfulness': 0.9379, 'answer_relevancy': 0.9543, 'context_recall': 0.8947, 'context_precision': 0.9342, 'answer_correctness': 0.5718}
-
+I chose to fine-tune the sentence-transformers/all-MiniLM-L6-v2 model. I chose to fine tune this model because it is a popular library for working with text embeddings. Fine-tuning this model enhances its ability to understand domain-specific language, improving semantic representation and performance in tasks like similarity search and ranking.
 
 ## Task 5: Assessing Performance
 **You are the AI Evaluation & Performance Engineer.**  It's time to assess all options for this product.
@@ -325,73 +372,8 @@ Your boss, the SVP of Technology, green-lighted this project to drive the adopti
 
 ✅ Deliverables:
 1. Test the fine-tuned embedding model using the RAGAS frameworks to quantify any improvements.  Provide results in a table.
-2. Test the two chunking strategies using the RAGAS frameworks to quantify any improvements. Provide results in a table.
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
 
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>Metric</th>
-      <th>Baseline</th>
-      <th>Recursive</th>
-      <th>Baseline -&gt; Recursive</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>faithfulness</td>
-      <td>0.938889</td>
-      <td>0.832334</td>
-      <td>-0.106555</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>answer_relevancy</td>
-      <td>0.869088</td>
-      <td>0.813999</td>
-      <td>-0.055089</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>context_recall</td>
-      <td>0.888889</td>
-      <td>0.885965</td>
-      <td>-0.002924</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>context_precision</td>
-      <td>0.870370</td>
-      <td>0.785088</td>
-      <td>-0.085283</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>answer_correctness</td>
-      <td>0.658931</td>
-      <td>0.680589</td>
-      <td>0.021658</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-Training model:
-{'train_runtime': 89.5115, 'train_samples_per_second': 9.183, 'train_steps_per_second': 0.603, 'train_loss': 0.7247594904016565, 'epoch': 3.0}
+Below is the table of the results of the fine-tuned embedding model.
 
 <div>
 <style scoped>
@@ -457,19 +439,105 @@ Training model:
 </table>
 </div>
 
+2. Test the two chunking strategies using the RAGAS frameworks to quantify any improvements. Provide results in a table. 
+
+Below is the table of the results of the recursive text splitter.
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Metric</th>
+      <th>Baseline</th>
+      <th>Recursive</th>
+      <th>Baseline -&gt; Recursive</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>faithfulness</td>
+      <td>0.938889</td>
+      <td>0.832334</td>
+      <td>-0.106555</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>answer_relevancy</td>
+      <td>0.869088</td>
+      <td>0.813999</td>
+      <td>-0.055089</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>context_recall</td>
+      <td>0.888889</td>
+      <td>0.885965</td>
+      <td>-0.002924</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>context_precision</td>
+      <td>0.870370</td>
+      <td>0.785088</td>
+      <td>-0.085283</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>answer_correctness</td>
+      <td>0.658931</td>
+      <td>0.680589</td>
+      <td>0.021658</td>
+    </tr>
+  </tbody>
+</table>
+</div>
 
 3. The AI Solutions Engineer asks you “Which one is the best to test with internal stakeholders next week, and why?”
 
+Based on the results of the two fine-tuning strategies, the recursive text splitter is better to test with internal stakeholders next week. The recursive text splitter has a higher faithfulness metric, a higher answer relevancy metric, a higher context recall metric, a higher context precision metric, and a higher answer correctness metric than the character text splitter. Testing the recursive text splitter with internal stakeholders next week will provide more accurate and relevant results. Additionally, this will give us time to evalute additional embeddings and chunking strategies to fine tune the RAG system. Neither fine-tuning strategy improved the model to the point where it would be more accurate than the baseline.
+
 ## Task 6: Managing Your Boss and User Expectations
 **You are the SVP of Technology.**  Given the work done by your team so far, you're now sitting down with the AI Solutions Engineer.  You have tasked the solutions engineer to test out the new application with at least 50 different internal stakeholders over the next month.
+
 1. What is the story that you will give to the CEO to tell the whole company at the launch next month?
+
+The story that I will give to the CEO to tell the whole company at the launch next month is that we have developed a chatbot that can answer questions about the implications of AI. The chatbot is built using the latest open-source technologies and is designed to help people understand the latest developments in the AI industry. It has undergone initial fine-tuning with domain-specific language. The baseline model shows promise, but there is always more work to be done to improve the accuracy and relevance of the answers. Testing out the application with internal stakeholders will help us understand how the chatbot can be improved. Specifically, we will get a better idea of the types of questions that are important to internal stakeholders and how the chatbot can be improved to answer them more accurately.
+
 2. There appears to be important information not included in our build, for instance, the [270-day update](https://www.whitehouse.gov/briefing-room/statements-releases/2024/07/26/fact-sheet-biden-harris-administration-announces-new-ai-actions-and-receives-additional-major-voluntary-commitment-on-ai/) on the 2023 executive order on [Safe, Secure, and Trustworthy AI](https://www.whitehouse.gov/briefing-room/presidential-actions/2023/10/30/executive-order-on-the-safe-secure-and-trustworthy-development-and-use-of-artificial-intelligence/).  How might you incorporate relevant white-house briefing information into future versions?
+
+In future versions, I would incorporate relevant white-house briefing information into the application by adding a section to the chatbot that summarizes the latest news and updates on AI. This would give users access to the latest information on AI and how it is being regulated and managed. Additionally, I would add embed these articles to the context of the chatbot so that users can access the information directly from the chatbot. I would also add a feature that displays the links to the original articles so that users can further research the topics.
 
 ## Your Final Submission
 Please include the following in your final submission:
 1. A public link to a **written report** addressing each deliverable and answering each question.
+
+https://github.com/danzerca/implications-of-ai/blob/main/README.md
+
 2. A public link to any relevant **GitHub repo**
+
+https://github.com/danzerca/implications-of-ai
+
+https://www.loom.com/share/a0af8682e5544c80a4e4865fb410a4e2?sid=f1392a0a-09fe-4669-a1d3-2d4925ffa16d
+
 3. A public link to the **final version of your application** on Hugging Face
 
+https://huggingface.co/spaces/danicafisher/implications-of-AI
+
 4. A public link to your **fine-tuned embedding model** on Hugging Face
-https://huggingface.co/danicafisher/dfisher-sentence-transformer-fine-tuned
+
+https://huggingface.co/danicafisher/dfisher-sentence-transformer-fine-tuned2
